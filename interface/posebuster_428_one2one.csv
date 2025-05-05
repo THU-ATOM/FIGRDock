@@ -1,0 +1,4 @@
+input_protein,input_ligand,input_docking_grid,output_ligand_name
+/data/protein/BC_Data/Docking_Data/unimol_posebusters_eval_sets/posebusters/proteins/5S8I.pdb,/data/protein/BC_Data/Docking_Data/unimol_posebusters_eval_sets/posebusters/ligands/5S8I_2LY.sdf,/data/protein/BC_Data/Docking_Data/infer/posebuster428_grid10/5S8I.json,5S8I_predict
+/data/protein/BC_Data/Docking_Data/unimol_posebusters_eval_sets/posebusters/proteins/5SAK.pdb,/data/protein/BC_Data/Docking_Data/unimol_posebusters_eval_sets/posebusters/ligands/5SAK_ZRY.sdf,/data/protein/BC_Data/Docking_Data/infer/posebuster428_grid10/5SAK.json,5SAK_predict
+/data/protein/BC_Data/Docking_Data/unimol_posebusters_eval_sets/posebusters/proteins/5SB2.pdb,/data/protein/BC_Data/Docking_Data/unimol_posebusters_eval_sets/posebusters/ligands/5SB2_1K2.sdf,/data/protein/BC_Data/Docking_Data/infer/posebuster428_grid10/5SB2.json,5SB2_predict

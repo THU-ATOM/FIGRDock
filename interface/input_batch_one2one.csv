@@ -1,0 +1,5 @@
+input_protein,input_ligand,input_docking_grid,output_ligand_name
+/data/protein/BC_Data/Uni-Mol/unimol_docking_v2/example_data/protein.pdb,/data/protein/BC_Data/Uni-Mol/unimol_docking_v2/example_data/ligand.sdf,/data/protein/BC_Data/Uni-Mol/unimol_docking_v2/example_data/docking_grid.json
+/data/protein/SKData/Uni-Mol-Docking/Docking_data/3/3zzv/protein.pdb,/data/protein/SKData/Uni-Mol-Docking/Docking_data/3/3zzv/FUC_B_401.sdf,/data/protein/SKData/Uni-Mol-Docking/Docking_data/3/3zzv/FUC_B_401.json,FUC_B_401
+/data/protein/SKData/Uni-Mol-Docking/Docking_data/2/2rte/protein.pdb,/data/protein/SKData/Uni-Mol-Docking/Docking_data/2/2rte/BTN_B_300.sdf,/data/protein/SKData/Uni-Mol-Docking/Docking_data/2/2rte/BTN_B_300.json,BTN_B_300
+/data/protein/SKData/Uni-Mol-Docking/Docking_data/1/1ish/protein.pdb,/data/protein/SKData/Uni-Mol-Docking/Docking_data/1/1ish/ENP_A_1001.sdf,/data/protein/SKData/Uni-Mol-Docking/Docking_data/1/1ish/ENP_A_1001.json,ENP_A_1001
