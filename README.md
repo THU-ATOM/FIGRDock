@@ -4,7 +4,12 @@ This is the official code implementation for the paper: "FIGRDock: Fast Interact
 
 ## Pretraining Models and Data Download
 
-**Link:** [Insert Download Link Here]
+**Link:** [Google Drive](https://drive.google.com/drive/folders/1ZoXquOBEAMoQ0CVfJfXWUCidEWkBCY7U?usp=drive_link)
+
+
+
+
+
 
 **File Explanation:**
 
