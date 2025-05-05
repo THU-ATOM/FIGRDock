@@ -13,7 +13,7 @@ This is the official code implementation for the paper: "FIGRDock: Fast Interact
 * `unimol_bindnet_8A_all_with_Atom_apo`: Training data.
 * `unimol_bindnet_8A_all_with_Atom_test_good_data`: Testing data.
 
-## Training on PDB
+## Training on PDBBind
 
 
 
@@ -22,7 +22,7 @@ CUDA_VISIBLE_DEVICES=4,5,6,7 python -m torch.distributed.launch --nproc_per_node
 ```
 
 
-## Testing On PDB
+## Testing On PDBBind
 
 ### HOLO protein input
 
