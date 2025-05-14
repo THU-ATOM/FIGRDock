@@ -19,7 +19,7 @@ logging.basicConfig(
     level=os.environ.get("LOGLEVEL", "INFO").upper(),
     stream=sys.stdout,
 )
-logger = logging.getLogger("unimol.inference")
+logger = logging.getLogger("figrdock.inference")
 
 
 def main(args):

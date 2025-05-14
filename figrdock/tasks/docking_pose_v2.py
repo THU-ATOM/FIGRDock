@@ -25,7 +25,7 @@ from unicore.data import (
     FromNumpyDataset,
     EpochShuffleDataset,
 )
-from unimol.data import (
+from figrdock.data import (
     KeyDataset,
     LMDBDataset,
     ConformerSampleDockingPoseDataset,
