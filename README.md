@@ -41,6 +41,21 @@ CUDA_VISIBLE_DEVICES=6 python -u pdbbind_benchmark.py --data_path /data/protein/
 CUDA_VISIBLE_DEVICES=7 python -u pdbbind_benchmark.py --test-lmdb /data/protein/SKData/unimol_bindnet_8A_all_with_Atom_test_good_data/test_apo.lmdb --device 7 --checkpoint /data/protein/SKData/UniMOL_Docking/UniMol_Docking/unimol_docking_v2/figrdock/checkpoint_last.pt --use-flexible-docking flex_all --sc_aug 0 --pocket-dict dict_sidechain.txt  --task felix_bindnet_pretrain_all_train_ep11_apo_nosc_fix_mean_las_iter6_layers8_bz4_woprmsd_apo_good_data_noclashfix_iters500_last_fix_bigring  --max-pocket-atoms 510 --coord_decode_total_iter 6  --coord_decode_layers 8  --no-clash-fix --geom_reg_steps 500  > felix_bindnet_pretrain_all_train_ep11_apo_nosc_fix_mean_las_iter6_layers8_bz4_woprmsd_apo_good_data_noclashfix_iters500_last_fix_bigring.log 2>&1 &
 ```
 
+## Testing On PoseBsuters
+
+### HOLO protein input
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python posebuster_benchmark_flex.py --test-lmdb /data/protein/SKData/unimol_bindnet_8A_all_with_Atom_posebusters/test_holo.lmdb --device 1 --checkpoint /data/protein/SKData/UniMOL_Docking/UniMol_Docking/unimol_docking_v2/figrdock/checkpoint_last.pt --use-flexible-docking flex_all --max-pocket-atoms 510 --sc_aug 0 --task posebusters_holo
+python posebusters_pbvalid.py --task-name posebusters_holo --out-dir /data/protein/SKData/csv_pbvalid --apo-ligand-path  /data/protein/SKData/posebusters_holo
+```
+
+### APO protein input
+
+```bash
+CUDA_VISIBLE_DEVICES=1 python posebuster_benchmark_esm.py --test-lmdb /data/protein/SKData/unimol_bindnet_8A_all_with_Atom_posebusters/test_apo.lmdb --device 1 --checkpoint /data/protein/SKData/UniMOL_Docking/UniMol_Docking/unimol_docking_v2/figrdock/checkpoint_last.pt --use-flexible-docking flex_all --max-pocket-atoms 510 --sc_aug 0 --task posebusters_apo
+python posebusters_pbvalid_esm.py --task posebusters_apo --out-dir /data/protein/SKData/csv_pbvalid --apo-ligand-path /data/protein/SKData/posebusters_apo
+```
 
 
 
