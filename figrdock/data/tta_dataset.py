@@ -115,7 +115,7 @@ class TTADockingPoseDataset(BaseWrapperDataset):
         compound_LAS_edge_index = compound_LAS_edge_index.T
         atoms_with_h = []
         atoms_remove_h = [ele for ele in atoms if ele != "H"]
-        assert len(atoms_remove_h) == len(atoms2)
+        assert len(atoms_remove_h) == len(atoms2), f"data error: {len(atoms_remove_h)} vs {len(atoms2)} details: {atoms_remove_h} vs {atoms2}"
         if compound_LAS_edge_index.max() >= len(atoms2):
             print('data error')
         

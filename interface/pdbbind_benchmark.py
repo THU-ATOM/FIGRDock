@@ -12,7 +12,7 @@ import time
 import lmdb
 import pickle
 from pdbbind_benchmark_sc_utils import get_predict_pdb, cal_pocket_rmsd_metrics
-
+from pathlib import Path
 import argparse
 parser = argparse.ArgumentParser(description='Test on posebuster benchmark.\n \
     Metrices: ligand rmsd')
@@ -111,11 +111,11 @@ parser.add_argument(
 )
 
 parser.add_argument(
-        "--coord_decode_total_iter",
-        type=int,
-        default=4,
-        help="number of stack layers",
-    )
+    "--coord_decode_total_iter",
+    type=int,
+    default=4,
+    help="number of stack layers",
+)
         
 parser.add_argument(
     "--geom_reg_steps",
@@ -149,6 +149,8 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+assert os.path.exists(args.checkpoint), f'checkpoint not exists: {args.checkpoint}'
+assert os.path.exists(args.output_sdf_path), f'output sdf path not exists: {args.output_sdf_path}'
 predict_sdf_dir = os.path.join(args.output_sdf_path, f'predict_sdf_pdbbind_radius8_{args.use_flexible_docking}_{args.task}')
 if not os.path.exists(predict_sdf_dir):
     os.mkdir(predict_sdf_dir)
@@ -191,8 +193,9 @@ print("Test samples counts: ", len(input_ligand))
 
 lmdb_name = os.path.basename(args.test_lmdb).split(".")[0]
 # work on pdbbind lmdb
-user_dir = "../unimol"
+user_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "figrdock")
 script_path = os.path.join(user_dir, "infer.py")
+assert os.path.exists(script_path), f'script path not exists: {script_path}'
 if args.use_flexible_docking in ["base_flex_sc", "base_flex_all"]:
     assert args.pocket_dict == "dict_pkt.txt"
 loss = "flexible_docking_pose_v2" if args.use_flexible_docking != "rigid" else "docking_pose_v2"
@@ -357,9 +360,3 @@ if suffix == "protein_esmfold_aligned_tr_fix": # if apo
                 break
     lig_csv_result[0][2] = "pocket_rmsd"
 
-
-import csv
-with open(os.path.join(args.output_sdf_path, "csv", f'predict_sdf_pdbbind_radius8_{args.use_flexible_docking}_{args.task}.csv'), mode="w", newline="", encoding="utf-8") as file:
-    writer = csv.writer(file)
-    # 写入数据
-    writer.writerows(lig_csv_result)

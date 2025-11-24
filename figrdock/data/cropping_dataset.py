@@ -68,7 +68,7 @@ class CroppingPocketDataset(BaseWrapperDataset):
         dd[self.coordinates] = coordinates.astype(np.float32)
         # dd["residue"] = residue
         dd[self.holo_coordinates] = holo_coordinates.astype(np.float32)
-        dd[self.masked_tokens] = masked_tokens.astype(np.bool)
+        dd[self.masked_tokens] = masked_tokens.astype(bool)
         return dd
 
     def __getitem__(self, index: int):
