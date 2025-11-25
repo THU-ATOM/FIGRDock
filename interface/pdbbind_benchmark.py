@@ -148,7 +148,7 @@ parser.add_argument(
 
 
 args = parser.parse_args()
-
+assert os.path.exists(args.data_path), f'data path not exists: {args.data_path}'
 assert os.path.exists(args.checkpoint), f'checkpoint not exists: {args.checkpoint}'
 assert os.path.exists(args.output_sdf_path), f'output sdf path not exists: {args.output_sdf_path}'
 predict_sdf_dir = os.path.join(args.output_sdf_path, f'predict_sdf_pdbbind_radius8_{args.use_flexible_docking}_{args.task}')
@@ -204,7 +204,7 @@ cmd = f'\
     cp {os.path.join(os.path.dirname(args.test_lmdb), "dict_mol.txt") } {os.path.abspath(predict_sdf_dir)} \n\
     cp {os.path.join(os.path.dirname(args.test_lmdb), args.pocket_dict) } {os.path.abspath(predict_sdf_dir)} \n\
     cp {args.test_lmdb} {os.path.abspath(predict_sdf_dir)} \n\
-    CUDA_VISIBLE_DEVICES={args.device} python {script_path} --user-dir {user_dir} {os.path.abspath(predict_sdf_dir)} --valid-subset {lmdb_name} \
+    CUDA_VISIBLE_DEVICES={args.device} /opt/conda/bin/python {script_path} --user-dir {user_dir} {os.path.abspath(predict_sdf_dir)} --valid-subset {lmdb_name} \
         --results-path {os.path.abspath(predict_sdf_dir)} \
         --num-workers 8 --ddp-backend=c10d --batch-size {args.batch_size} \
         --task docking_pose_v2 --loss {loss} --arch docking_pose_v2 \
