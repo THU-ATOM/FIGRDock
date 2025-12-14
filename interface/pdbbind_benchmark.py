@@ -148,6 +148,17 @@ parser.add_argument(
 
 
 args = parser.parse_args()
+# ensure checkpoint exist or download for google drive
+if not os.path.exists(args.checkpoint):
+    checkpointdir = os.path.dirname(args.checkpoint)
+    print(f"⚠ Checkpoint not exist: {args.checkpoint}", flush=True)
+    print(f"Downloading from Google Drive...", flush=True)
+    import gdown, torch, pathlib as P
+    GDRIVE_FILE_ID = "1YNJ-HgasDS8bRDMAMKgYS0cs7H4-BP8R"
+    url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+    os.makedirs(checkpointdir, exist_ok=True)
+    gdown.download(url, args.checkpoint, quiet=False)
+
 assert os.path.exists(args.data_path), f'data path not exists: {args.data_path}'
 assert os.path.exists(args.checkpoint), f'checkpoint not exists: {args.checkpoint}'
 assert os.path.exists(args.output_sdf_path), f'output sdf path not exists: {args.output_sdf_path}'
@@ -187,7 +198,7 @@ for idx in range(len(_keys)):
     output_ligand_name.append(ligand_name)
     input_protein.append(os.path.join(os.path.join(args.data_path, ligand_name), f"{ligand_name}_{suffix}.pdb"))
     input_ligand.append(ligand_file)
-    
+
 
 print("Test samples counts: ", len(input_ligand))
 
