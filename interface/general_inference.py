@@ -179,9 +179,9 @@ for idx in range(len(_keys)):
     input_protein = data["source_pdb"]
     assert os.path.exists(input_protein), f'input protein not exists: {input_protein}'
     input_ligand = sdf_or_mol(os.path.join(os.path.join(args.data_path, complex_name), f"{complex_name}_ligand"))
-    if input_ligand is None and "source_sdf" in data:
+    if input_ligand is None and "source_sdf" in data.keys():
         input_ligand = data["source_sdf"]
-    else:
+    elif input_ligand is None:
         raise NotImplementedError
     complex_name_list.append(complex_name)
     input_protein_list.append(input_protein)
