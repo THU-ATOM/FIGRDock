@@ -27,6 +27,8 @@ from flexible_docking_utils import process_sc_rawdata, check_res_intact, SORTING
 from pdbbind_benchmark_sc_utils import allowable_features, bond_type_to_value
 from collections import defaultdict
 import torch
+import subprocess
+from multiprocessing import Pool
 
 def parse_pdb_from_path(path):
     ret = parse_pdb_structure_from_path(path)
@@ -548,11 +550,17 @@ class Processor:
     
     def single_clash_fix(self, input_content):
         input_ligand, output_ligand, label_ligand, pocket_mol = input_content
-        script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "unimol", "scripts", "6tsr.py")
-        cmd = "python {} --input-ligand {} --output-ligand {} --label-ligand {} --pocket-mol {} --num-6t-trials 5".format(
-            script_path, input_ligand, output_ligand, label_ligand, pocket_mol
-        )
-        os.system(cmd)
+        script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "figrdock", "scripts", "6tsr.py")
+        cmd = [
+            '/opt/conda/bin/python',
+            script_path,
+            '--input-ligand',  input_ligand,
+            '--output-ligand', output_ligand,
+            '--label-ligand',  label_ligand,
+            '--pocket-mol',    pocket_mol,
+            '--num-6t-trials', '5'
+        ]
+        subprocess.run(cmd, check=True, timeout=120)
         return True
 
     def clash_fix(self, predicted_ligand, input_protein, input_ligand):
@@ -562,15 +570,20 @@ class Processor:
             input_ligand = [input_ligand]
             input_protein = [input_protein]
             predicted_ligand = [predicted_ligand]
-        input_content = zip(predicted_ligand, predicted_ligand, input_ligand, input_protein)
+        input_content = list(zip(predicted_ligand, predicted_ligand, input_ligand, input_protein))
 
+        timeout_cases = []
         with Pool(self.nthreads) as pool:
-            for inner_output in tqdm(
-                pool.imap(self.single_clash_fix, input_content), total=len(input_ligand) if type(input_ligand) is list else 1
-            ):
-                if not inner_output:
-                    print("fail to clash fix")
-        return predicted_ligand
+            results = pool.imap(self.single_clash_fix, input_content)
+            for idx, res in enumerate(tqdm(results, total=len(input_content))):
+                try:
+                    res  # 真正触发计算/异常
+                except subprocess.TimeoutExpired:
+                    print(f'[TIMEOUT] 第 {idx} 条任务超时，输入为：{input_content[idx]}')
+                    timeout_cases.append(idx)
+                except Exception as e:
+                    print(f'[ERROR] 第 {idx} 条任务失败：{e}')
+        return predicted_ligand, timeout_cases
 
     @classmethod
     def build_processors(

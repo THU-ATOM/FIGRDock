@@ -306,6 +306,106 @@ def cal_pocket_rmsd_metrics(input_protein, target_protein, predict_pocket_atom_d
     pocket_sym_rmsd_results = np.array(pocket_sym_rmsd_results)
     return pocket_rmsd_results, pocket_sym_rmsd_results, pocket_csv_result
 
+def get_general_predict_pdb(test_lmdb, test_pickle, batch_size, conf_size, output_dir, max_pocket_atoms, pocket_dict):
+    env = lmdb.open(
+        test_lmdb,
+        subdir=False,
+        readonly=True,
+        lock=False,
+        readahead=False,
+        meminit=False,
+        max_readers=256,
+    )
+    output_protein_list = []
+
+    with env.begin() as txn:
+        _keys = list(txn.cursor().iternext(values=False))
+    with open(test_pickle, 'rb') as file:
+        test_data = pickle.load(file)
+    with open(pocket_dict) as file:
+        pocket_dictionary_list = [line.strip() for line in file.readlines()]
+
+    for idx in tqdm(range(len(_keys))):
+        try:
+            datapoint_pickled = env.begin().get(f"{idx}".encode("ascii"))
+            data = pickle.loads(datapoint_pickled)
+            complex_name = data["complex_name"]
+            apo_protein_path = data["source_pdb"]
+            pocket_atoms = data["pocket_atoms"]
+            residue_list = data["residue"]
+            restype_list = data["restype"]
+            pocket_center = data["pocket_coordinates"][0].mean(axis=0)
+            parser = PDBParser()
+            structure = parser.get_structure("structure", apo_protein_path)
+            _remove_hs(structure)
+            _sort_atoms_by_element(structure)
+            predict_pocket_atom = {}
+
+            d = (idx * conf_size) // batch_size
+            r = (idx * conf_size) % batch_size
+            min_pocket_prmsd = 1e9
+            for _ in range(conf_size):
+                if test_data[d]["pocket_prmsd_score"][r] < min_pocket_prmsd:
+                    min_pocket_prmsd = test_data[d]["pocket_prmsd_score"][r]
+                    best_idx = [d,r]
+                if r == batch_size-1:
+                    d += 1
+                    r = 0
+                else:
+                    r += 1
+            pocket_coord_predict = test_data[best_idx[0]]["pocket_coord_predict"][best_idx[1]][1:-1]
+            if len(pocket_atoms) > max_pocket_atoms:
+                cropped_pocket_atoms = test_data[best_idx[0]]["pocket_atoms"][best_idx[1]][1:-1]
+                c_idx = 0
+                new_pocket_atoms = []
+                new_residue_list = []
+                new_restype_list = []
+                new_pocket_coordinate = []
+                for patom, pres, prestype, pcoord in zip(pocket_atoms, residue_list, restype_list, data["pocket_coordinates"][0]):
+                    if pocket_dictionary_list[cropped_pocket_atoms[c_idx]] == patom:
+                        c_idx += 1
+                        new_pocket_atoms.append(patom)
+                        new_residue_list.append(pres)
+                        new_restype_list.append(prestype)
+                        new_pocket_coordinate.append(pcoord)
+                    if c_idx >= max_pocket_atoms: break
+                assert len(new_pocket_atoms) == len(cropped_pocket_atoms), f"{len(new_pocket_atoms)} {len(cropped_pocket_atoms)}"
+                assert len(new_residue_list) == len(new_pocket_coordinate) == len(cropped_pocket_atoms)
+                pocket_atoms = new_pocket_atoms
+                residue_list = new_residue_list
+                restype_list = new_restype_list
+                pocket_center = np.array(new_pocket_coordinate).mean(axis=0)
+            
+            cnt = 0
+            for model in structure:
+                for chain in model:
+                    for res in chain:
+                        residue_id = f'{res.get_parent().get_id()}_{res.get_id()[1]}{res.get_id()[2]}'.strip()
+                        if residue_id in residue_list:
+                            if not restype_list[residue_list.index(residue_id)] == res.get_resname():
+                                print(f"{restype_list[residue_list.index(residue_id)]} vs {res.get_resname()} in {complex_name} {residue_id}, {residue_list.index(residue_id)} {restype_list}")
+                            start = residue_list.index(residue_id)
+                            end = start + residue_list.count(residue_id)
+                            res_atom_list = pocket_atoms[start:end]
+                            for atom in res:
+                                if atom.get_name() in res_atom_list:
+                                    atom.coord = pocket_coord_predict[start + res_atom_list.index(atom.get_name())].cpu() + pocket_center
+                                    predict_pocket_atom[f"{residue_id}-{atom.get_name()}"] = cnt
+                                    cnt += 1
+            assert cnt == len(pocket_atoms), f"{cnt} vs {len(pocket_atoms)}"
+            predict_pocket_atom["length"] = cnt
+
+            io = PDBIO()
+            io.set_structure(structure)
+            pdb_output_path = os.path.join(output_dir, f"{complex_name}_predict.pdb")
+            io.save(pdb_output_path)
+            output_protein_list.append(pdb_output_path)
+        except Exception as e:
+            print(f"Error in processing index {idx}: {e}")
+            continue
+
+    return output_protein_list
+
 if __name__ == '__main__':
 
     test_lmdb = "/data/protein/BC_Data/Docking_Data/pdbbind/unimol_bindnet_8A_all_with_Atom_test_good_data/test_apo.lmdb"
