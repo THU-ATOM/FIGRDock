@@ -29,6 +29,7 @@ from collections import defaultdict
 import torch
 import subprocess
 from multiprocessing import Pool
+import traceback
 
 def parse_pdb_from_path(path):
     ret = parse_pdb_structure_from_path(path)
@@ -562,9 +563,21 @@ class Processor:
         ]
         subprocess.run(cmd, check=True, timeout=120)
         return True
+    
+    def _safe_single_clash_fix(self, args):
+        """子进程里跑真正的 single_clash_fix，并捕获所有异常"""
+        idx, item = args
+        try:
+            self.single_clash_fix(item)      # 原来函数返回 True/False 都行
+            return idx, True, None
+        except subprocess.TimeoutExpired:
+            return idx, False, 'TIMEOUT'
+        except Exception as e:
+            # 把异常信息带回来，方便调试
+            return idx, False, f'{type(e).__name__}:{e}|{traceback.format_exc()}'
 
     def clash_fix(self, predicted_ligand, input_protein, input_ligand):
-        if self.mode=='batch_one2many':
+        if self.mode == 'batch_one2many':
             input_protein = [input_protein] * len(input_ligand)
         elif self.mode == 'single':
             input_ligand = [input_ligand]
@@ -574,15 +587,21 @@ class Processor:
 
         timeout_cases = []
         with Pool(self.nthreads) as pool:
-            results = pool.imap(self.single_clash_fix, input_content)
-            for idx, res in enumerate(tqdm(results, total=len(input_content))):
-                try:
-                    res  # 真正触发计算/异常
-                except subprocess.TimeoutExpired:
+            # 把“带索引”的输入丢给安全壳函数
+            results = pool.imap(
+                self._safe_single_clash_fix,
+                enumerate(input_content),
+                chunksize=1
+            )
+            for idx, success, flag in tqdm(results, total=len(input_content)):
+                if success:
+                    continue                 # 正常，什么都不用干
+                if flag == 'TIMEOUT':
                     print(f'[TIMEOUT] 第 {idx} 条任务超时，输入为：{input_content[idx]}')
-                    timeout_cases.append(idx)
-                except Exception as e:
-                    print(f'[ERROR] 第 {idx} 条任务失败：{e}')
+                else:
+                    print(f'[ERROR] 第 {idx} 条任务失败：{flag}')
+                timeout_cases.append(idx)
+
         return predicted_ligand, timeout_cases
 
     @classmethod

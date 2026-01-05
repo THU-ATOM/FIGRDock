@@ -239,6 +239,8 @@ if args.use_flexible_docking != "rigid": # if apo
     pocket_dict = os.path.join(predict_sdf_dir, args.pocket_dict)
     input_protein =  get_general_predict_pdb(lmdb_file, pkl_file, args.batch_size, args.conf_size, predict_sdf_dir, args.max_pocket_atoms, pocket_dict)
     print("input_protein: ", input_protein)
+else:
+    input_protein = input_protein_list
 
 # optimize
 if not args.no_clash_fix:
