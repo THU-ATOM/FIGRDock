@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build DrugCLIP Docker Image
+# Build FIGRDock Docker Image
 #
 # Usage:
 #   bash build.sh                    # Build without proxy

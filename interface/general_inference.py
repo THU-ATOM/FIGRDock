@@ -244,7 +244,12 @@ else:
 
 # optimize
 if not args.no_clash_fix:
-    output_ligand_sdf = postprocessor.clash_fix(output_ligand_sdf, input_protein, input_ligand_list)
+    output_ligand_sdf, timeout_cases = postprocessor.clash_fix(output_ligand_sdf, input_protein, input_ligand_list)
+    if timeout_cases:
+        print(f"Warning: {len(timeout_cases)} ligands failed clash_fix (timeout or error), using original poses")
+        print(f"Warning: Failed indices: {timeout_cases}")
+    else:
+        print("All ligands successfully processed by clash_fix")
 
 print('output ligands path:\n', output_ligand_sdf)
 end_time = time.time()

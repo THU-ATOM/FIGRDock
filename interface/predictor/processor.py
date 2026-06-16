@@ -561,7 +561,7 @@ class Processor:
             '--pocket-mol',    pocket_mol,
             '--num-6t-trials', '5'
         ]
-        subprocess.run(cmd, check=True, timeout=120)
+        subprocess.run(cmd, check=True, timeout=1200)
         return True
     
     def _safe_single_clash_fix(self, args):

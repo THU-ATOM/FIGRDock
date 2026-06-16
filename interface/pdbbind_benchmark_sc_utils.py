@@ -1,11 +1,53 @@
-import lmdb 
+import lmdb
 import pickle
+import shutil
 from tqdm import tqdm
 import os
 import copy
 import numpy as np
 from Bio.PDB import PDBParser, PDBIO
 from rdkit.Chem.rdchem import BondType as BT
+
+
+def _align_cropped_pocket(
+    pocket_atoms,
+    residue_list,
+    restype_list,
+    pocket_coordinates,
+    cropped_token_ids,
+    pocket_dictionary_list,
+):
+    """Align the model-cropped pocket (token ids, in original order) back to the
+    original (atom_name, residue_id) tuples.
+
+    The model-side cropping in CroppingPocketDataset uses np.sort(np.random.choice(...))
+    so cropped indices are an order-preserving subset of the original pocket_atoms.
+    We walk both sequences with two pointers, consuming entries with matching atom
+    names. cropped_token_ids is expected to already have the leading [CLS] / trailing
+    [SEP] stripped by the caller.
+
+    Returns aligned (pocket_atoms, residue_list, restype_list, pocket_coordinates)
+    or None if alignment cannot be completed (caller falls back to apo structure).
+    """
+    new_pocket_atoms = []
+    new_residue_list = []
+    new_restype_list = []
+    new_pocket_coordinate = []
+    c_idx = 0
+    for patom, pres, prestype, pcoord in zip(
+        pocket_atoms, residue_list, restype_list, pocket_coordinates
+    ):
+        if c_idx >= len(cropped_token_ids):
+            break
+        if pocket_dictionary_list[cropped_token_ids[c_idx]] == patom:
+            new_pocket_atoms.append(patom)
+            new_residue_list.append(pres)
+            new_restype_list.append(prestype)
+            new_pocket_coordinate.append(pcoord)
+            c_idx += 1
+    if c_idx != len(cropped_token_ids):
+        return None
+    return new_pocket_atoms, new_residue_list, new_restype_list, new_pocket_coordinate
 
 SORTING_DICT = {
     "ALA": ["N", "CA", "C", "O", "CB"],
@@ -189,25 +231,21 @@ def get_predict_pdb(test_lmdb, test_pickle, batch_size, conf_size, output_dir, m
                     r += 1
             pocket_coord_predict = test_data[best_idx[0]]["pocket_coord_predict"][best_idx[1]][1:-1]
             if len(pocket_atoms) > max_pocket_atoms:
-                cropped_pocket_atoms = test_data[best_idx[0]]["pocket_atoms"][best_idx[1]][1:-1]
-                c_idx = 0
-                new_pocket_atoms = []
-                new_residue_list = []
-                new_restype_list = []
-                new_pocket_coordinate = []
-                for patom, pres, prestype, pcoord in zip(pocket_atoms, residue_list, restype_list, data["pocket_coordinates"][0]):
-                    if pocket_dictionary_list[cropped_pocket_atoms[c_idx]] == patom:
-                        c_idx += 1
-                        new_pocket_atoms.append(patom)
-                        new_residue_list.append(pres)
-                        new_restype_list.append(prestype)
-                        new_pocket_coordinate.append(pcoord)
-                    if c_idx >= max_pocket_atoms: break
-                assert len(new_pocket_atoms) == len(cropped_pocket_atoms), f"{len(new_pocket_atoms)} {len(cropped_pocket_atoms)}"
-                assert len(new_residue_list) == len(new_pocket_coordinate) == len(cropped_pocket_atoms)
-                pocket_atoms = new_pocket_atoms
-                residue_list = new_residue_list
-                restype_list = new_restype_list
+                cropped_token_ids = test_data[best_idx[0]]["pocket_atoms"][best_idx[1]][1:-1]
+                aligned = _align_cropped_pocket(
+                    pocket_atoms,
+                    residue_list,
+                    restype_list,
+                    data["pocket_coordinates"][0],
+                    cropped_token_ids,
+                    pocket_dictionary_list,
+                )
+                if aligned is None:
+                    raise RuntimeError(
+                        f"pocket cropping alignment failed: cropped={len(cropped_token_ids)} "
+                        f"original={len(pocket_atoms)}"
+                    )
+                pocket_atoms, residue_list, restype_list, new_pocket_coordinate = aligned
                 pocket_center = np.array(new_pocket_coordinate).mean(axis=0)
             
             cnt = 0
@@ -237,6 +275,21 @@ def get_predict_pdb(test_lmdb, test_pickle, batch_size, conf_size, output_dir, m
             output_protein_list.append(pdb_output_path)
         except Exception as e:
             print(f"Error in processing index {idx}: {e}")
+            expected_len = idx + 1
+            try:
+                fallback_path = os.path.join(output_dir, f"{complex_name}_predict.pdb")
+                if not os.path.exists(fallback_path):
+                    shutil.copyfile(apo_protein_path, fallback_path)
+            except Exception as fallback_e:
+                print(f"  -> fallback copy failed for index {idx}: {fallback_e}")
+                fallback_path = None
+            while len(output_protein_list) < expected_len:
+                output_protein_list.append(fallback_path)
+            while len(target_protein_list) < expected_len:
+                target_protein_list.append(None)
+            while len(predict_pocket_atom_dict) < expected_len:
+                predict_pocket_atom_dict.append({"length": 0})
+            print(f"  -> using apo structure as fallback predict.pdb for index {idx}")
             continue
 
     return output_protein_list, target_protein_list, predict_pocket_atom_dict
@@ -355,25 +408,21 @@ def get_general_predict_pdb(test_lmdb, test_pickle, batch_size, conf_size, outpu
                     r += 1
             pocket_coord_predict = test_data[best_idx[0]]["pocket_coord_predict"][best_idx[1]][1:-1]
             if len(pocket_atoms) > max_pocket_atoms:
-                cropped_pocket_atoms = test_data[best_idx[0]]["pocket_atoms"][best_idx[1]][1:-1]
-                c_idx = 0
-                new_pocket_atoms = []
-                new_residue_list = []
-                new_restype_list = []
-                new_pocket_coordinate = []
-                for patom, pres, prestype, pcoord in zip(pocket_atoms, residue_list, restype_list, data["pocket_coordinates"][0]):
-                    if pocket_dictionary_list[cropped_pocket_atoms[c_idx]] == patom:
-                        c_idx += 1
-                        new_pocket_atoms.append(patom)
-                        new_residue_list.append(pres)
-                        new_restype_list.append(prestype)
-                        new_pocket_coordinate.append(pcoord)
-                    if c_idx >= max_pocket_atoms: break
-                assert len(new_pocket_atoms) == len(cropped_pocket_atoms), f"{len(new_pocket_atoms)} {len(cropped_pocket_atoms)}"
-                assert len(new_residue_list) == len(new_pocket_coordinate) == len(cropped_pocket_atoms)
-                pocket_atoms = new_pocket_atoms
-                residue_list = new_residue_list
-                restype_list = new_restype_list
+                cropped_token_ids = test_data[best_idx[0]]["pocket_atoms"][best_idx[1]][1:-1]
+                aligned = _align_cropped_pocket(
+                    pocket_atoms,
+                    residue_list,
+                    restype_list,
+                    data["pocket_coordinates"][0],
+                    cropped_token_ids,
+                    pocket_dictionary_list,
+                )
+                if aligned is None:
+                    raise RuntimeError(
+                        f"pocket cropping alignment failed: cropped={len(cropped_token_ids)} "
+                        f"original={len(pocket_atoms)}"
+                    )
+                pocket_atoms, residue_list, restype_list, new_pocket_coordinate = aligned
                 pocket_center = np.array(new_pocket_coordinate).mean(axis=0)
             
             cnt = 0
@@ -402,6 +451,15 @@ def get_general_predict_pdb(test_lmdb, test_pickle, batch_size, conf_size, outpu
             output_protein_list.append(pdb_output_path)
         except Exception as e:
             print(f"Error in processing index {idx}: {e}")
+            try:
+                fallback_path = os.path.join(output_dir, f"{complex_name}_predict.pdb")
+                if not os.path.exists(fallback_path):
+                    shutil.copyfile(apo_protein_path, fallback_path)
+                output_protein_list.append(fallback_path)
+                print(f"  -> using apo structure as fallback predict.pdb for index {idx}")
+            except Exception as fallback_e:
+                print(f"  -> fallback also failed for index {idx}: {fallback_e}")
+                output_protein_list.append(None)
             continue
 
     return output_protein_list

@@ -54,7 +54,8 @@ def single_conf_gen(tgt_mol, num_confs=1000, seed=0, lig_name=None):
     ps.randomSeed = seed
     ps.numThreads = 0
     ps.useRandomCoords = True
-    AllChem.EmbedMolecule(mol, ps)
+    if AllChem.EmbedMolecule(mol, ps) == -1:
+        return copy.deepcopy(tgt_mol)
     try:
         AllChem.MMFFOptimizeMolecule(mol, confId=0)
     except:

@@ -4,8 +4,6 @@ RUN pip install setuptools wheel twine
 
 RUN pip install -U numpy>=1.23 scipy
 
-RUN pip install rdkit-pypi==2021.9.5.1
-
 RUN pip install biopandas networkx
 
 RUN pip install rdkit==2024.3.5
