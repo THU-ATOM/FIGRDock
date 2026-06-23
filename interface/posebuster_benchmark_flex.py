@@ -59,7 +59,7 @@ parser.add_argument(
 parser.add_argument(
     "--device",
     type=int,
-    default=5,
+    default=0,
     help='cuda device'
 )
 parser.add_argument(
@@ -167,7 +167,7 @@ cmd = f'\
     cp {os.path.join(os.path.dirname(args.test_lmdb), "dict_mol.txt") } {os.path.abspath(predict_sdf_dir)} \n\
     cp {os.path.join(os.path.dirname(args.test_lmdb), args.pocket_dict) } {os.path.abspath(predict_sdf_dir)} \n\
     cp {args.test_lmdb} {os.path.abspath(predict_sdf_dir)} \n\
-    CUDA_VISIBLE_DEVICES={args.device} python {script_path} --user-dir {user_dir} {os.path.abspath(predict_sdf_dir)} --valid-subset {lmdb_name} \
+    CUDA_VISIBLE_DEVICES=${{CUDA_VISIBLE_DEVICES:-{args.device}}} python {script_path} --user-dir {user_dir} {os.path.abspath(predict_sdf_dir)} --valid-subset {lmdb_name} \
         --results-path {os.path.abspath(predict_sdf_dir)} \
         --num-workers 8 --ddp-backend=c10d --batch-size {args.batch_size} \
         --task docking_pose_v2 --loss {loss} --arch docking_pose_v2 \

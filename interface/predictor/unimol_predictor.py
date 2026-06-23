@@ -46,7 +46,7 @@ class UnimolPredictor:
         loss = "docking_pose_v2" if use_sidechain == "rigid" else "flexible_docking_pose_v2"
         cmd = f' cp {pkt_data_path} {os.path.abspath(output_ligand_dir)} \n\
                  cp {mol_data_path} {os.path.abspath(output_ligand_dir)} \n\
-            CUDA_VISIBLE_DEVICES="3" python {script_path} --user-dir {user_dir} {os.path.abspath(output_ligand_dir)} --valid-subset {lmdb_name} \
+            CUDA_VISIBLE_DEVICES=${{CUDA_VISIBLE_DEVICES:-0}} python {script_path} --user-dir {user_dir} {os.path.abspath(output_ligand_dir)} --valid-subset {lmdb_name} \
             --results-path {os.path.abspath(output_ligand_dir)} \
             --num-workers 8 --ddp-backend=c10d --batch-size {batch_size} \
             --task docking_pose_v2 --loss {loss} --arch docking_pose_v2 \
